@@ -34,16 +34,14 @@ webots::Node *epuck_node;
 
 #define PATHCUBESIZE (0.15)
 
-struct cell_t getRobotCell()
+struct cell_t getInitialCell(cbLab *lab)
 {
     struct cell_t cell;
-    if (epuck_node)
-    {
-        const double *position = epuck_node->getPosition();
-        // std::cout << "e-puck position: x=" << position[0] << " y=" << position[1] << " z=" << position[2] << std::endl;
-        cell.x = static_cast<int>(position[0] / PATHCUBESIZE);
-        cell.y = static_cast<int>(position[1] / PATHCUBESIZE);
-    }
+
+    cell.x = lab->Target(0)->Center().x / PATHCUBESIZE;
+    cell.y = lab->Target(0)->Center().y / PATHCUBESIZE;
+    std::cout << "initial cell: x=" << cell.x << " y=" << cell.y << std::endl;
+
     return cell;
 }
 
@@ -54,6 +52,15 @@ int main(int argc, char **argv)
     // ---
     webots::Supervisor *supervisor = new webots::Supervisor();
     int timeStep = (int)supervisor->getBasicTimeStep();
+
+    // random offsets to avoid GPS informing on exact position in maze
+    int offsetX = 0;
+    int offsetY = 0;
+
+    srand(time(0));
+    offsetX = rand() % 40;
+    offsetY = rand() % 19;
+
 
     // ---
     // 1a. GET MAXIMUM SIMULATION TIME
@@ -104,6 +111,7 @@ int main(int argc, char **argv)
 
     cbLabHandler *labHandler = new cbLabHandler;
     labHandler->setChildrenField(children_field);
+    labHandler->setOffsets(offsetX, offsetY);
 
     QXmlSimpleReader xmlParser;
     xmlParser.setContentHandler(labHandler);
@@ -121,8 +129,8 @@ int main(int argc, char **argv)
     webots::Field *translationField = epuck_node->getField("translation");
     if (translationField) {
         // Define the new position (e.g., move to X=1.0, Y=2.0)
-        double newTranslation[3] = {labHandler->getLab()->Target(0)->Center().x, 
-                                    labHandler->getLab()->Target(0)->Center().y, 
+        double newTranslation[3] = {labHandler->getLab()->Target(0)->Center().x + offsetX * PATHCUBESIZE, 
+                                    labHandler->getLab()->Target(0)->Center().y + offsetY * PATHCUBESIZE, 
                                     0.0}; 
         translationField->setSFVec3f(newTranslation);
         std::cout << "E-puck repositioned to " << newTranslation[0] << " " << newTranslation[1] <<std::endl;
