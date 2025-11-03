@@ -41,7 +41,7 @@ class Map():
                            None
                
            i=i+1
-           
+
 class MyRob:
     def __init__(self):
         # create the Robot instance.
@@ -83,6 +83,18 @@ class MyRob:
         self.labMap = None
         self.prob_matrix = np.full((CELLROWS, CELLCOLS), 1.0 / (CELLROWS * CELLCOLS))
 
+        self.sensor_model = {
+            'left':  {'mean': 146.22, 'std': 5.15},
+            'right': {'mean': 146.42, 'std': 4.70},
+            'front': {'mean': 133.43, 'std': 3.53}
+        }
+
+        self.no_wall = {
+            'left':  {'mean': 67.13, 'std': 3.38},
+            'right': {'mean': 67.27, 'std': 3.38},
+            'front': {'mean': 67.11, 'std': 2.35}
+        }
+
         # Step simulation to initialize sensors.
         self.step()
 
@@ -98,7 +110,7 @@ class MyRob:
         # Left / Right Sensors: No wall when < 80 | Wall when > 140
         # Front Sensors (7 + 0 / 2): No wall when < 80 | Wall when > 110
         self.ds = [s.getValue() for s in self.dist_sensors]
-        self.sensor_map = {
+        self.sensor_data = {
             'front': (self.ds[0] + self.ds[7]) / 2,
             'left': self.ds[5],
             'right': self.ds[2]
@@ -125,10 +137,49 @@ class MyRob:
         pass
 
     def sense_update(self):
-        pass
+        new_prob_matrix = np.zeros_like(self.prob_matrix)
 
-    def expected_reads(self):
-        pass
+        sensor_to_world = {
+            'north': {'front': 'north', 'left': 'west', 'right': 'east'},
+            'south': {'front': 'south', 'left': 'east', 'right': 'west'},
+            'east': {'front': 'east', 'left': 'north', 'right': 'south'},
+            'west': {'front': 'west', 'left': 'south', 'right': 'north'}
+        }
+        
+        mapping = sensor_to_world[self.direction]
+
+        for i in range(CELLROWS):
+            for j in range(CELLCOLS):
+                prob = self.prob_matrix[i, j]
+                
+                walls = self.check_walls(i, j)
+                
+                likelihood = 1.0
+                
+                for sensor_dir, measured_value in self.sensor_data.items():
+                    world_dir = mapping[sensor_dir]
+                    has_wall = walls[world_dir]
+                    
+                    if has_wall:
+                        mu = self.sensor_model[sensor_dir]['mean']
+                        sigma = self.sensor_model[sensor_dir]['std']
+                    else:
+                        mu = self.no_wall[sensor_dir]['mean']
+                        sigma = self.no_wall[sensor_dir]['std']
+                    
+                    variance = sigma ** 2
+                    
+                    gauss = (1 / (np.sqrt(2 * np.pi * variance))) * np.exp(
+                        -((measured_value - mu) ** 2) / (2 * variance)
+                    )
+                    
+                    likelihood *= gauss
+
+                new_prob_matrix[i, j] = prob * likelihood
+
+        total_sum = np.sum(new_prob_matrix)
+        if total_sum > 0:
+            self.prob_matrix = new_prob_matrix / total_sum
 
     def driveMotors(self, leftSpeed, rightSpeed):
         self.leftMotor.setVelocity(max(min(leftSpeed,MAX_SPEED),-MAX_SPEED))
@@ -238,7 +289,7 @@ if __name__ == '__main__':
     mapc = Map("../C1_supervisor/C1-lab.xml")
     myrob.setMap(mapc.labMap)
     myrob.printMap()
-  
+
     target_pos = myrob.abs_ref_pos.copy()
 
     while myrob.step() != -1:
