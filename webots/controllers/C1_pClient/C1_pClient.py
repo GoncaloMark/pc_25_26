@@ -2,6 +2,7 @@
 
 import numpy
 import xml.etree.ElementTree as ET
+import numpy as np
 
 
 # You may need to import some classes of the controller module. Ex:
@@ -40,6 +41,7 @@ class Map():
                            None
                
            i=i+1
+           
 class MyRob:
     def __init__(self):
         # create the Robot instance.
@@ -77,6 +79,10 @@ class MyRob:
         self.compass = self.robot.getDevice("compass")
         self.compass.enable(self.timeStep)
 
+        self.direction = None
+        self.labMap = None
+        self.prob_matrix = np.full((CELLROWS, CELLCOLS), 1.0 / (CELLROWS * CELLCOLS))
+
         # Step simulation to initialize sensors.
         self.step()
 
@@ -88,11 +94,45 @@ class MyRob:
         self.cur_pos = numpy.array(self.gps.getValues())
         self.cur_dir = (-numpy.arctan2(self.compass.getValues()[1], self.compass.getValues()[0]) + numpy.pi/2) % (2 * numpy.pi)
         self.cur_dir = (self.cur_dir + numpy.pi) % (2 * numpy.pi) - numpy.pi
+        
+        # Left / Right Sensors: No wall when < 80 | Wall when > 140
+        # Front Sensors (7 + 0 / 2): No wall when < 80 | Wall when > 110
+        self.ds = [s.getValue() for s in self.dist_sensors]
+        self.sensor_map = {
+            'front': (self.ds[0] + self.ds[7]) / 2,
+            'left': self.ds[5],
+            'right': self.ds[2]
+        }
+
+        self.get_direction()
+        # print(self.sensor_map)
+        # if self.labMap:
+            # print(self.check_walls(0,0))
+
+    def get_direction(self):
+        degs = np.rad2deg(self.cur_dir) % 360
+
+        if 45 <= degs < 135:
+            self.direction = 'north'
+        elif 135 <= degs < 225:
+            self.direction = 'west'
+        elif 225 <= degs < 315:
+            self.direction = 'south'
+        else:
+            self.direction = 'east'
+
+    def motion_update(self):
+        pass
+
+    def sense_update(self):
+        pass
+
+    def expected_reads(self):
+        pass
 
     def driveMotors(self, leftSpeed, rightSpeed):
         self.leftMotor.setVelocity(max(min(leftSpeed,MAX_SPEED),-MAX_SPEED))
         self.rightMotor.setVelocity(max(min(rightSpeed,MAX_SPEED),-MAX_SPEED))
-
 
     def rotate(self, target_dir):
         #print("Rotating to direction:", target_dir)
@@ -138,6 +178,45 @@ class MyRob:
             dist = numpy.linalg.norm(target_pos - self.cur_pos)
         self.driveMotors(0.0, 0.0)
 
+    def check_walls(self, i, j):
+        walls = {'north': False, 'south': False, 'west': False, 'east': False}
+
+        if i == CELLROWS - 1:  # Top row
+            walls['north'] = True
+        elif (i * 2 + 1) < len(self.labMap):
+            if self.labMap[i * 2 + 1][j * 2] == '-':
+                walls['north'] = True
+
+        # Check south wall
+        if i == 0:  # Bottom row
+            walls['south'] = True
+        elif (i * 2 - 1) >= 0:
+            if self.labMap[i * 2 - 1][j * 2] == '-':
+                walls['south'] = True
+
+        # Check west wall
+        if j == 0:  # Leftmost column
+            walls['west'] = True
+        elif (j * 2 - 1) >= 0:
+            if self.labMap[i * 2][j * 2 - 1] == '|':
+                walls['west'] = True
+
+        # Check east wall
+        if j == CELLCOLS - 1:  # Rightmost column
+            walls['east'] = True
+        elif (j * 2 + 1) < len(self.labMap[0]):
+            if self.labMap[i * 2][j * 2 + 1] == '|':
+                walls['east'] = True
+
+        return walls
+
+    def save_probability_matrix(self, filename="localization.out"):
+        with open(filename, "a") as file:
+            for i in range(CELLROWS-1,-1,-1):
+                row = " ".join(f"{self.prob_matrix[i, j]:.3f}" for j in range(CELLCOLS))
+                file.write(row + "\n")
+            file.write("\n")
+
     # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
     def setMap(self, labMap):
@@ -177,4 +256,6 @@ if __name__ == '__main__':
         elif command == "W":
             print("Moving West")
             target_pos[0] -= CELL_SIZE
+        elif command == "exit":
+            break
         myrob.move_to(target_pos)

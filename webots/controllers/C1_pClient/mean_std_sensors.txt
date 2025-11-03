@@ -1,0 +1,3 @@
+for 3.4 cm on the left i get mean 146.2195528795378 and std of 5.154856753897369
+for 3.4 cm on the right i get mean 146.42171606394345 and std of 4.6955468673224665
+for 3.4 cm on the front i get mean 133.426323736742 and std of 3.5275892570505873
