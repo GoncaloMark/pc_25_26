@@ -116,25 +116,59 @@ class MyRob:
             'right': self.ds[2]
         }
 
-        self.get_direction()
+        # self.get_direction()
+
         # print(self.sensor_map)
         # if self.labMap:
             # print(self.check_walls(0,0))
 
-    def get_direction(self):
-        degs = np.rad2deg(self.cur_dir) % 360
+    def set_direction(self, dir):
+        # degs = np.rad2deg(self.cur_dir) % 360
 
-        if 45 <= degs < 135:
-            self.direction = 'north'
-        elif 135 <= degs < 225:
-            self.direction = 'west'
-        elif 225 <= degs < 315:
-            self.direction = 'south'
-        else:
-            self.direction = 'east'
+        # if 45 <= degs < 135:
+        #     self.direction = 'north'
+        # elif 135 <= degs < 225:
+        #     self.direction = 'west'
+        # elif 225 <= degs < 315:
+        #     self.direction = 'south'
+        # else:
+        #     self.direction = 'east'
+        self.direction = dir
 
     def motion_update(self):
-        pass
+        new_prob_matrix = np.zeros_like(self.prob_matrix)
+        
+        movement = {
+            'north': (1, 0),   
+            'south': (-1, 0),  
+            'east': (0, 1),   
+            'west': (0, -1)    
+        }
+
+        di, dj = movement[self.direction]
+        
+        for i in range(CELLROWS):
+            for j in range(CELLCOLS):
+                prob = self.prob_matrix[i, j]
+                
+                if prob > 0: 
+                    new_i = i + di
+                    new_j = j + dj
+                    
+                    if 0 <= new_i < CELLROWS and 0 <= new_j < CELLCOLS:
+                        walls = self.check_walls(i, j)
+                        direction_blocked = walls[self.direction]
+                        
+                        if direction_blocked:
+                            new_prob_matrix[i, j] += prob
+                        else:
+                            new_prob_matrix[new_i, new_j] += prob
+                    else:
+                        new_prob_matrix[i, j] += prob
+        
+        total = np.sum(new_prob_matrix)
+        if total > 0:
+            self.prob_matrix = new_prob_matrix / total
 
     def sense_update(self):
         new_prob_matrix = np.zeros_like(self.prob_matrix)
@@ -292,21 +326,40 @@ if __name__ == '__main__':
 
     target_pos = myrob.abs_ref_pos.copy()
 
+    open("localization.out", "w").close()
+    myrob.save_probability_matrix()
+
     while myrob.step() != -1:
         # Read next movement from file
         command = commands_file.readline().strip()
         if command == "N":
             print("Moving North")
             target_pos[1] += CELL_SIZE
+            myrob.set_direction('north')
         elif command == "S":
             print("Moving South")
             target_pos[1] -= CELL_SIZE
+            myrob.set_direction('south')
         elif command == "E":
             print("Moving East")
             target_pos[0] += CELL_SIZE
+            myrob.set_direction('east')
         elif command == "W":
             print("Moving West")
             target_pos[0] -= CELL_SIZE
+            myrob.set_direction('west')
         elif command == "exit":
             break
+
+        myrob.motion_update()
         myrob.move_to(target_pos)
+        myrob.sense_update()
+        myrob.save_probability_matrix()
+
+        max_prob_idx = np.unravel_index(np.argmax(myrob.prob_matrix), myrob.prob_matrix.shape)
+        entropy = -np.sum(myrob.prob_matrix * np.log(myrob.prob_matrix + 1e-10))
+
+        print(f"Most likely position: ({max_prob_idx[0]}, {max_prob_idx[1]}) with prob {myrob.prob_matrix[max_prob_idx]:.4f}")
+        print(f"Uncertainty (entropy): {entropy:.4f}\n")
+
+    commands_file.close()
