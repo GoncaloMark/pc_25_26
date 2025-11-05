@@ -348,12 +348,12 @@ if __name__ == '__main__':
             print("Moving West")
             target_pos[0] -= CELL_SIZE
             myrob.set_direction('west')
-        elif command == "exit":
+        elif command == "":
             break
 
-        myrob.motion_update()
-        myrob.move_to(target_pos)
         myrob.sense_update()
+        myrob.move_to(target_pos)
+        myrob.motion_update()
         myrob.save_probability_matrix()
 
         max_prob_idx = np.unravel_index(np.argmax(myrob.prob_matrix), myrob.prob_matrix.shape)
