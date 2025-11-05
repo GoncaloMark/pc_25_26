@@ -3,6 +3,7 @@
 import numpy
 import xml.etree.ElementTree as ET
 import numpy as np
+from enum import Enum
 
 
 # You may need to import some classes of the controller module. Ex:
@@ -14,6 +15,18 @@ CELLCOLS=14
 CELL_SIZE = 0.15
 KP = 10.0
 MAX_SPEED = 6.27
+
+class Orientation(Enum):
+    NORTH = 'north'
+    SOUTH = 'south'
+    EAST = 'east'
+    WEST = 'west'
+
+class Direction(Enum):
+    LEFT = 'left'
+    RIGHT = 'right'
+    FRONT = 'front'
+
 
 class Map():
     def __init__(self, filename):
@@ -79,20 +92,20 @@ class MyRob:
         self.compass = self.robot.getDevice("compass")
         self.compass.enable(self.timeStep)
 
-        self.direction = None
+        self.orientation = None
         self.labMap = None
         self.prob_matrix = np.full((CELLROWS, CELLCOLS), 1.0 / (CELLROWS * CELLCOLS))
 
         self.sensor_model = {
-            'left':  {'mean': 146.22, 'std': 5.15},
-            'right': {'mean': 146.42, 'std': 4.70},
-            'front': {'mean': 133.43, 'std': 3.53}
+            Direction.LEFT:  {'mean': 146.22, 'std': 5.15},
+            Direction.RIGHT: {'mean': 146.42, 'std': 4.70},
+            Direction.FRONT: {'mean': 133.43, 'std': 3.53}
         }
 
         self.no_wall = {
-            'left':  {'mean': 67.13, 'std': 3.38},
-            'right': {'mean': 67.27, 'std': 3.38},
-            'front': {'mean': 67.11, 'std': 2.35}
+            Direction.LEFT:  {'mean': 67.13, 'std': 3.38},
+            Direction.RIGHT: {'mean': 67.27, 'std': 3.38},
+            Direction.FRONT: {'mean': 67.11, 'std': 2.35}
         }
 
         # Step simulation to initialize sensors.
@@ -107,13 +120,11 @@ class MyRob:
         self.cur_dir = (-numpy.arctan2(self.compass.getValues()[1], self.compass.getValues()[0]) + numpy.pi/2) % (2 * numpy.pi)
         self.cur_dir = (self.cur_dir + numpy.pi) % (2 * numpy.pi) - numpy.pi
         
-        # Left / Right Sensors: No wall when < 80 | Wall when > 140
-        # Front Sensors (7 + 0 / 2): No wall when < 80 | Wall when > 110
         self.ds = [s.getValue() for s in self.dist_sensors]
         self.sensor_data = {
-            'front': (self.ds[0] + self.ds[7]) / 2,
-            'left': self.ds[5],
-            'right': self.ds[2]
+            Direction.FRONT: (self.ds[0] + self.ds[7]) / 2, #* Avg of both front facing sensors
+            Direction.LEFT: self.ds[5],
+            Direction.RIGHT: self.ds[2]
         }
 
         # self.get_direction()
@@ -122,30 +133,20 @@ class MyRob:
         # if self.labMap:
             # print(self.check_walls(0,0))
 
-    def set_direction(self, dir):
-        # degs = np.rad2deg(self.cur_dir) % 360
-
-        # if 45 <= degs < 135:
-        #     self.direction = 'north'
-        # elif 135 <= degs < 225:
-        #     self.direction = 'west'
-        # elif 225 <= degs < 315:
-        #     self.direction = 'south'
-        # else:
-        #     self.direction = 'east'
-        self.direction = dir
+    def set_orientation(self, dir):
+        self.orientation = dir
 
     def motion_update(self):
         new_prob_matrix = np.zeros_like(self.prob_matrix)
         
         movement = {
-            'north': (1, 0),   
-            'south': (-1, 0),  
-            'east': (0, 1),   
-            'west': (0, -1)    
+            Orientation.NORTH: (1, 0),   
+            Orientation.SOUTH: (-1, 0),  
+            Orientation.EAST: (0, 1),   
+            Orientation.WEST: (0, -1)    
         }
 
-        di, dj = movement[self.direction]
+        di, dj = movement[self.orientation]
         
         for i in range(CELLROWS):
             for j in range(CELLCOLS):
@@ -157,7 +158,7 @@ class MyRob:
                     
                     if 0 <= new_i < CELLROWS and 0 <= new_j < CELLCOLS:
                         walls = self.check_walls(i, j)
-                        direction_blocked = walls[self.direction]
+                        direction_blocked = walls[self.orientation]
                         
                         if direction_blocked:
                             new_prob_matrix[i, j] += prob
@@ -174,13 +175,13 @@ class MyRob:
         new_prob_matrix = np.zeros_like(self.prob_matrix)
 
         sensor_to_world = {
-            'north': {'front': 'north', 'left': 'west', 'right': 'east'},
-            'south': {'front': 'south', 'left': 'east', 'right': 'west'},
-            'east': {'front': 'east', 'left': 'north', 'right': 'south'},
-            'west': {'front': 'west', 'left': 'south', 'right': 'north'}
+            Orientation.NORTH: {Direction.FRONT: Orientation.NORTH, Direction.LEFT: Orientation.WEST, Direction.RIGHT: Orientation.EAST},
+            Orientation.SOUTH: {Direction.FRONT: Orientation.SOUTH, Direction.LEFT: Orientation.EAST, Direction.RIGHT: Orientation.WEST},
+            Orientation.EAST: {Direction.FRONT: Orientation.EAST, Direction.LEFT: Orientation.NORTH, Direction.RIGHT: Orientation.SOUTH},
+            Orientation.WEST: {Direction.FRONT: Orientation.WEST, Direction.LEFT: Orientation.SOUTH, Direction.RIGHT: Orientation.NORTH}
         }
         
-        mapping = sensor_to_world[self.direction]
+        mapping = sensor_to_world[self.orientation]
 
         for i in range(CELLROWS):
             for j in range(CELLCOLS):
@@ -264,34 +265,34 @@ class MyRob:
         self.driveMotors(0.0, 0.0)
 
     def check_walls(self, i, j):
-        walls = {'north': False, 'south': False, 'west': False, 'east': False}
+        walls = {Orientation.NORTH: False, Orientation.SOUTH: False, Orientation.WEST: False, Orientation.EAST: False}
 
         if i == CELLROWS - 1:  # Top row
-            walls['north'] = True
+            walls[Orientation.NORTH] = True
         elif (i * 2 + 1) < len(self.labMap):
             if self.labMap[i * 2 + 1][j * 2] == '-':
-                walls['north'] = True
+                walls[Orientation.NORTH] = True
 
         # Check south wall
         if i == 0:  # Bottom row
-            walls['south'] = True
+            walls[Orientation.SOUTH] = True
         elif (i * 2 - 1) >= 0:
             if self.labMap[i * 2 - 1][j * 2] == '-':
-                walls['south'] = True
+                walls[Orientation.SOUTH] = True
 
         # Check west wall
         if j == 0:  # Leftmost column
-            walls['west'] = True
+            walls[Orientation.WEST] = True
         elif (j * 2 - 1) >= 0:
             if self.labMap[i * 2][j * 2 - 1] == '|':
-                walls['west'] = True
+                walls[Orientation.WEST] = True
 
         # Check east wall
         if j == CELLCOLS - 1:  # Rightmost column
-            walls['east'] = True
+            walls[Orientation.EAST] = True
         elif (j * 2 + 1) < len(self.labMap[0]):
             if self.labMap[i * 2][j * 2 + 1] == '|':
-                walls['east'] = True
+                walls[Orientation.EAST] = True
 
         return walls
 
@@ -335,19 +336,19 @@ if __name__ == '__main__':
         if command == "N":
             print("Moving North")
             target_pos[1] += CELL_SIZE
-            myrob.set_direction('north')
+            myrob.set_orientation(Orientation.NORTH)
         elif command == "S":
             print("Moving South")
             target_pos[1] -= CELL_SIZE
-            myrob.set_direction('south')
+            myrob.set_orientation(Orientation.SOUTH)
         elif command == "E":
             print("Moving East")
             target_pos[0] += CELL_SIZE
-            myrob.set_direction('east')
+            myrob.set_orientation(Orientation.EAST)
         elif command == "W":
             print("Moving West")
             target_pos[0] -= CELL_SIZE
-            myrob.set_direction('west')
+            myrob.set_orientation(Orientation.WEST)
         elif command == "":
             break
 
