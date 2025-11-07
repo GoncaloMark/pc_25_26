@@ -26,6 +26,7 @@ class Direction(Enum):
     LEFT = 'left'
     RIGHT = 'right'
     FRONT = 'front'
+    BACK = 'back'
 
 
 class Map():
@@ -96,17 +97,32 @@ class MyRob:
         self.labMap = None
         self.prob_matrix = np.full((CELLROWS, CELLCOLS), 1.0 / (CELLROWS * CELLCOLS))
 
+        # Wall
         self.sensor_model = {
-            Direction.LEFT:  {'mean': 146.22, 'std': 5.15},
-            Direction.RIGHT: {'mean': 146.42, 'std': 4.70},
-            Direction.FRONT: {'mean': 133.43, 'std': 3.53}
+            Direction.LEFT:  {'mean': 146.21, 'std': 4.89},
+            Direction.RIGHT: {'mean': 146.34, 'std': 4.70},
+            Direction.FRONT: {'mean': 133.30, 'std': 3.57},
+            Direction.BACK: {'mean': 119.13, 'std': 3.45}
         }
 
+        # No wall
         self.no_wall = {
-            Direction.LEFT:  {'mean': 67.13, 'std': 3.38},
-            Direction.RIGHT: {'mean': 67.27, 'std': 3.38},
-            Direction.FRONT: {'mean': 67.11, 'std': 2.35}
+            Direction.LEFT:  {'mean': 67.23, 'std': 3.29},
+            Direction.RIGHT: {'mean': 67.23, 'std': 3.19},
+            Direction.FRONT: {'mean': 67.13, 'std': 2.35},
+            Direction.BACK: {'mean': 67.15, 'std': 2.28}
         }
+
+        ###* MEASUREMENT CODE START *###
+
+        # self.measures_right = []
+        # self.measures_left = []
+        # self.measures_back = []
+        # self.measures_front = []
+
+        # self.measure_count = 0
+
+        ###* MEASUREMENT CODE END *###
 
         # Step simulation to initialize sensors.
         self.step()
@@ -124,14 +140,21 @@ class MyRob:
         self.sensor_data = {
             Direction.FRONT: (self.ds[0] + self.ds[7]) / 2, #* Avg of both front facing sensors
             Direction.LEFT: self.ds[5],
-            Direction.RIGHT: self.ds[2]
+            Direction.RIGHT: self.ds[2],
+            Direction.BACK: (self.ds[3] + self.ds[4]) / 2 #* Avg of both back facing sensors
         }
 
-        # self.get_direction()
+        ###* MEASUREMENT CODE START *###
 
-        # print(self.sensor_map)
-        # if self.labMap:
-            # print(self.check_walls(0,0))
+        # self.measures_front.append((self.ds[0] + self.ds[7]) / 2)
+        # self.measures_right.append(self.ds[2])
+        # self.measures_left.append(self.ds[5])
+        # self.measures_back.append((self.ds[3] + self.ds[4]) / 2)
+
+        # self.measure_count += 1
+        # print(self.measure_count)
+
+        ###* MEASUREMENT CODE END *###
 
     def set_orientation(self, dir):
         self.orientation = dir
@@ -175,10 +198,10 @@ class MyRob:
         new_prob_matrix = np.zeros_like(self.prob_matrix)
 
         sensor_to_world = {
-            Orientation.NORTH: {Direction.FRONT: Orientation.NORTH, Direction.LEFT: Orientation.WEST, Direction.RIGHT: Orientation.EAST},
-            Orientation.SOUTH: {Direction.FRONT: Orientation.SOUTH, Direction.LEFT: Orientation.EAST, Direction.RIGHT: Orientation.WEST},
-            Orientation.EAST: {Direction.FRONT: Orientation.EAST, Direction.LEFT: Orientation.NORTH, Direction.RIGHT: Orientation.SOUTH},
-            Orientation.WEST: {Direction.FRONT: Orientation.WEST, Direction.LEFT: Orientation.SOUTH, Direction.RIGHT: Orientation.NORTH}
+            Orientation.NORTH: {Direction.FRONT: Orientation.NORTH, Direction.BACK: Orientation.SOUTH, Direction.LEFT: Orientation.WEST, Direction.RIGHT: Orientation.EAST},
+            Orientation.SOUTH: {Direction.FRONT: Orientation.SOUTH, Direction.BACK: Orientation.NORTH, Direction.LEFT: Orientation.EAST, Direction.RIGHT: Orientation.WEST},
+            Orientation.EAST: {Direction.FRONT: Orientation.EAST, Direction.BACK: Orientation.WEST, Direction.LEFT: Orientation.NORTH, Direction.RIGHT: Orientation.SOUTH},
+            Orientation.WEST: {Direction.FRONT: Orientation.WEST, Direction.BACK: Orientation.EAST, Direction.LEFT: Orientation.SOUTH, Direction.RIGHT: Orientation.NORTH}
         }
         
         mapping = sensor_to_world[self.orientation]
@@ -234,7 +257,6 @@ class MyRob:
 
     def move_to(self, target_pos):
         #print("Moving to position:", target_pos, " from ", self.cur_pos)
-
         target_dir = numpy.arctan2(target_pos[1] - self.cur_pos[1], target_pos[0] - self.cur_pos[0])
         target_dir = (target_dir + numpy.pi/4)//(numpy.pi/2) * numpy.pi/2  # snap to 90 degrees
 
@@ -349,12 +371,46 @@ if __name__ == '__main__':
             print("Moving West")
             target_pos[0] -= CELL_SIZE
             myrob.set_orientation(Orientation.WEST)
+        ###* MEASUREMENT CODE START *###
+        # elif command == "R":
+        #     print("Resetting")
+        #     myrob.measure_count = 0
+        #     myrob.measures_right.clear()
+        #     myrob.measures_left.clear()
+        #     myrob.measures_back.clear()
+        #     myrob.measures_front.clear()
+        #     print("Reset Done")
+        ###* MEASUREMENT CODE END *###
         elif command == "":
             break
+
+        ###* MEASUREMENT CODE START *###
+            # pass
+
+        # if myrob.measure_count == 1000:
+        #     mean_right = np.mean(myrob.measures_right)
+        #     std_right = np.std(myrob.measures_right)
+
+        #     mean_left = np.mean(myrob.measures_left)
+        #     std_left = np.std(myrob.measures_left)
+
+        #     mean_front = np.mean(myrob.measures_front)
+        #     std_front = np.std(myrob.measures_front)
+
+        #     mean_back = np.mean(myrob.measures_back)
+        #     std_back = np.std(myrob.measures_back)
+
+        #     print(f"MEAN_RIGHT: {mean_right} | STD_RIGHT: {std_right}")
+        #     print(f"MEAN_LEFT: {mean_left} | STD_LEFT: {std_left}")
+        #     print(f"MEAN_FRONT: {mean_front} | STD_FRONT: {std_front}")
+        #     print(f"MEAN_BACK: {mean_back} | STD_BACK: {std_back}")
+        #     break
+        ###* MEASUREMENT CODE END *###
 
         myrob.sense_update()
         myrob.move_to(target_pos)
         myrob.motion_update()
+        myrob.sense_update()
         myrob.save_probability_matrix()
 
         max_prob_idx = np.unravel_index(np.argmax(myrob.prob_matrix), myrob.prob_matrix.shape)
