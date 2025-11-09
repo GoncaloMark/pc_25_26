@@ -98,7 +98,7 @@ class MyRob:
         self.prob_matrix = np.full((CELLROWS, CELLCOLS), 1.0 / (CELLROWS * CELLCOLS))
 
         # Wall
-        self.sensor_model = {
+        self.sensor_model_wall = {
             Direction.LEFT:  {'mean': 146.21, 'std': 4.89},
             Direction.RIGHT: {'mean': 146.34, 'std': 4.70},
             Direction.FRONT: {'mean': 133.30, 'std': 3.57},
@@ -106,7 +106,7 @@ class MyRob:
         }
 
         # No wall
-        self.no_wall = {
+        self.sensor_model_no_wall = {
             Direction.LEFT:  {'mean': 67.23, 'std': 3.29},
             Direction.RIGHT: {'mean': 67.23, 'std': 3.19},
             Direction.FRONT: {'mean': 67.13, 'std': 2.35},
@@ -219,11 +219,11 @@ class MyRob:
                     has_wall = walls[world_dir]
                     
                     if has_wall:
-                        mu = self.sensor_model[sensor_dir]['mean']
-                        sigma = self.sensor_model[sensor_dir]['std']
+                        mu = self.sensor_model_wall[sensor_dir]['mean']
+                        sigma = self.sensor_model_wall[sensor_dir]['std']
                     else:
-                        mu = self.no_wall[sensor_dir]['mean']
-                        sigma = self.no_wall[sensor_dir]['std']
+                        mu = self.sensor_model_no_wall[sensor_dir]['mean']
+                        sigma = self.sensor_model_no_wall[sensor_dir]['std']
                     
                     variance = sigma ** 2
                     
