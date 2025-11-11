@@ -115,12 +115,12 @@ class MyRob:
 
         ###* MEASUREMENT CODE START *###
 
-        # self.measures_right = []
-        # self.measures_left = []
-        # self.measures_back = []
-        # self.measures_front = []
+        #self.measures_right = []
+        #self.measures_left = []
+        #self.measures_back = []
+        #self.measures_front = []
 
-        # self.measure_count = 0
+        #self.measure_count = 0
 
         ###* MEASUREMENT CODE END *###
 
@@ -146,13 +146,13 @@ class MyRob:
 
         ###* MEASUREMENT CODE START *###
 
-        # self.measures_front.append((self.ds[0] + self.ds[7]) / 2)
-        # self.measures_right.append(self.ds[2])
-        # self.measures_left.append(self.ds[5])
-        # self.measures_back.append((self.ds[3] + self.ds[4]) / 2)
+        #self.measures_front.append((self.ds[0] + self.ds[7]) / 2)
+        #self.measures_right.append(self.ds[2])
+        #self.measures_left.append(self.ds[5])
+        #self.measures_back.append((self.ds[3] + self.ds[4]) / 2)
 
-        # self.measure_count += 1
-        # print(self.measure_count)
+        #self.measure_count += 1
+        #print(self.measure_count)
 
         ###* MEASUREMENT CODE END *###
 
@@ -343,7 +343,7 @@ if __name__ == '__main__':
 
     myrob = MyRob()
 
-    mapc = Map("../C1_supervisor/C1-lab.xml")
+    mapc = Map("../C1_supervisor/C1-lab3.xml")
     myrob.setMap(mapc.labMap)
     myrob.printMap()
 
@@ -372,39 +372,39 @@ if __name__ == '__main__':
             target_pos[0] -= CELL_SIZE
             myrob.set_orientation(Orientation.WEST)
         ###* MEASUREMENT CODE START *###
-        # elif command == "R":
-        #     print("Resetting")
-        #     myrob.measure_count = 0
-        #     myrob.measures_right.clear()
-        #     myrob.measures_left.clear()
-        #     myrob.measures_back.clear()
-        #     myrob.measures_front.clear()
-        #     print("Reset Done")
+        #elif command == "R":
+            #print("Resetting")
+            #myrob.measure_count = 0
+            #myrob.measures_right.clear()
+            #myrob.measures_left.clear()
+            #myrob.measures_back.clear()
+            #myrob.measures_front.clear()
+            #print("Reset Done")
         ###* MEASUREMENT CODE END *###
         elif command == "":
             break
 
         ###* MEASUREMENT CODE START *###
-            # pass
+             #pass
 
-        # if myrob.measure_count == 1000:
-        #     mean_right = np.mean(myrob.measures_right)
-        #     std_right = np.std(myrob.measures_right)
+        #if myrob.measure_count == 1000:
+            #mean_right = np.mean(myrob.measures_right)
+            #std_right = np.std(myrob.measures_right)
 
-        #     mean_left = np.mean(myrob.measures_left)
-        #     std_left = np.std(myrob.measures_left)
+            #mean_left = np.mean(myrob.measures_left)
+            #std_left = np.std(myrob.measures_left)
 
-        #     mean_front = np.mean(myrob.measures_front)
-        #     std_front = np.std(myrob.measures_front)
+            #mean_front = np.mean(myrob.measures_front)
+            #std_front = np.std(myrob.measures_front)
 
-        #     mean_back = np.mean(myrob.measures_back)
-        #     std_back = np.std(myrob.measures_back)
+            #mean_back = np.mean(myrob.measures_back)
+            #std_back = np.std(myrob.measures_back)
 
-        #     print(f"MEAN_RIGHT: {mean_right} | STD_RIGHT: {std_right}")
-        #     print(f"MEAN_LEFT: {mean_left} | STD_LEFT: {std_left}")
-        #     print(f"MEAN_FRONT: {mean_front} | STD_FRONT: {std_front}")
-        #     print(f"MEAN_BACK: {mean_back} | STD_BACK: {std_back}")
-        #     break
+            #print(f"MEAN_RIGHT: {mean_right} | STD_RIGHT: {std_right}")
+            #print(f"MEAN_LEFT: {mean_left} | STD_LEFT: {std_left}")
+            #print(f"MEAN_FRONT: {mean_front} | STD_FRONT: {std_front}")
+            #print(f"MEAN_BACK: {mean_back} | STD_BACK: {std_back}")
+            #break
         ###* MEASUREMENT CODE END *###
 
         myrob.sense_update()

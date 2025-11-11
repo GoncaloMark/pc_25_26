@@ -93,7 +93,7 @@ int main(int argc, char **argv)
     // 3. DEFINE AND CREATE NEW OBJECTS
     // ---
 
-    char lab_filename[1024 * 8] = "C1-lab.xml";
+    char lab_filename[1024 * 8] = "C1-lab3.xml";
     QXmlInputSource *source;
 
     QFile srcFile(lab_filename);

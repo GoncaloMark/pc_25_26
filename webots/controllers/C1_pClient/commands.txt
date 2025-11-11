@@ -1,9 +1,7 @@
-E
-E
-E
 N
-E
-E
-E
-E
-S
+W
+W
+W
+N
+W
+N
