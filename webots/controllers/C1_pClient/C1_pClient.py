@@ -95,6 +95,7 @@ class MyRob:
 
         self.orientation = None
         self.labMap = None
+        self.walls = None
         self.prob_matrix = np.full((CELLROWS, CELLCOLS), 1.0 / (CELLROWS * CELLCOLS))
 
         # Wall
@@ -169,6 +170,7 @@ class MyRob:
             Orientation.WEST: (0, -1)    
         }
 
+        local_wall_matrix = self.walls
         di, dj = movement[self.orientation]
         
         for i in range(CELLROWS):
@@ -180,7 +182,7 @@ class MyRob:
                     new_j = j + dj
                     
                     if 0 <= new_i < CELLROWS and 0 <= new_j < CELLCOLS:
-                        walls = self.check_walls(i, j)
+                        walls = local_wall_matrix[i, j]
                         direction_blocked = walls[self.orientation]
                         
                         if direction_blocked:
@@ -205,12 +207,13 @@ class MyRob:
         }
         
         mapping = sensor_to_world[self.orientation]
+        local_wall_matrix = self.walls
 
         for i in range(CELLROWS):
             for j in range(CELLCOLS):
                 prob = self.prob_matrix[i, j]
                 
-                walls = self.check_walls(i, j)
+                walls = local_wall_matrix[i, j]
                 
                 likelihood = 1.0
                 
@@ -286,37 +289,45 @@ class MyRob:
             dist = numpy.linalg.norm(target_pos - self.cur_pos)
         self.driveMotors(0.0, 0.0)
 
-    def check_walls(self, i, j):
-        walls = {Orientation.NORTH: False, Orientation.SOUTH: False, Orientation.WEST: False, Orientation.EAST: False}
+    def precompute_walls(self):
+        wall_matrix = np.empty((CELLROWS, CELLCOLS), dtype=object)
 
-        if i == CELLROWS - 1:  # Top row
-            walls[Orientation.NORTH] = True
-        elif (i * 2 + 1) < len(self.labMap):
-            if self.labMap[i * 2 + 1][j * 2] == '-':
-                walls[Orientation.NORTH] = True
+        row_doubled_idxs = [i * 2 for i in range(CELLROWS)]
+        col_doubled_idxs = [j * 2 for j in range(CELLCOLS)]
 
-        # Check south wall
-        if i == 0:  # Bottom row
-            walls[Orientation.SOUTH] = True
-        elif (i * 2 - 1) >= 0:
-            if self.labMap[i * 2 - 1][j * 2] == '-':
-                walls[Orientation.SOUTH] = True
+        local_map = self.labMap
+        map_h = len(local_map)
+        map_w = len(local_map[0])
 
-        # Check west wall
-        if j == 0:  # Leftmost column
-            walls[Orientation.WEST] = True
-        elif (j * 2 - 1) >= 0:
-            if self.labMap[i * 2][j * 2 - 1] == '|':
-                walls[Orientation.WEST] = True
+        for i in range(CELLROWS):
+            current_row = row_doubled_idxs[i]
 
-        # Check east wall
-        if j == CELLCOLS - 1:  # Rightmost column
-            walls[Orientation.EAST] = True
-        elif (j * 2 + 1) < len(self.labMap[0]):
-            if self.labMap[i * 2][j * 2 + 1] == '|':
-                walls[Orientation.EAST] = True
+            north_i = current_row + 1
+            south_i = current_row - 1
 
-        return walls
+            for j in range(CELLCOLS):
+                current_col = col_doubled_idxs[j]
+
+                east_j  = current_col + 1
+                west_j  = current_col - 1
+
+                walls = {
+                    Orientation.NORTH:
+                        (i == CELLROWS - 1) or (north_i < map_h and local_map[north_i][current_col] == '-'),
+
+                    Orientation.SOUTH:
+                        (i == 0) or (south_i >= 0 and local_map[south_i][current_col] == '-'),
+
+                    Orientation.WEST:
+                        (j == 0) or (west_j >= 0 and local_map[current_row][west_j] == '|'),
+
+                    Orientation.EAST:
+                        (j == CELLCOLS - 1) or (east_j < map_w and local_map[current_row][east_j] == '|')
+                }
+
+                wall_matrix[i, j] = walls
+
+        return wall_matrix
 
     def save_probability_matrix(self, filename="localization.out"):
         with open(filename, "a") as file:
@@ -329,6 +340,7 @@ class MyRob:
     # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
     def setMap(self, labMap):
         self.labMap = labMap
+        self.walls = self.precompute_walls()
 
     def printMap(self):
         for l in reversed(self.labMap):
