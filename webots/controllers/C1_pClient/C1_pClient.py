@@ -161,6 +161,14 @@ class MyRob:
         self.orientation = dir
 
     def motion_update(self):
+        """
+        This method performs the motion update step of a probabilistic markovian localization algorithm. It updates the belief probability matrix based on the robot's motion.
+
+        The rules for the update step are:
+            - Probability in each cell moves to an adjacent cell in the robot's orientation, unless a wall blocks that movement.
+            - If movement is blocked or goes out of bounds, the probability remains in the same cell.
+            - After updating all cells, the resulting probability matrix is normalized to sum to 1.
+        """
         new_prob_matrix = np.zeros_like(self.prob_matrix)
         
         movement = {
@@ -197,6 +205,19 @@ class MyRob:
             self.prob_matrix = new_prob_matrix / total
 
     def sense_update(self):
+        """
+        This method performs the sensor update step of the probabilistic markovian localization algorithm. It updates the belief distribution using the robot's current sensor readings. 
+        
+        For each cell in the grid the algorithm computes the likelihood of receiving the measured sensor values if the robot was actually located in that cell given its current orientation and the maze's wall layout.
+
+        The algorithm's process is as follows:
+            - Convert robot front relative directions (front/left/right/back) into world-space orientation (north/east/west/south) given the robot's current orientation.
+            - For each cell, compare the expected wall presence with the actual sensor measurements.
+            - For each sensor, compute a Gaussian likelihood based on the sensor models (wall and no wall)
+            - Multiply all individual sensor likelihoods to form the total likelihood for that cell.
+            - Update the probability of the cell as: new_prob = prior_prob * likelihood
+            - Normalize the entire probability matrix so it sums to 1.
+        """
         new_prob_matrix = np.zeros_like(self.prob_matrix)
 
         sensor_to_world = {
@@ -290,6 +311,17 @@ class MyRob:
         self.driveMotors(0.0, 0.0)
 
     def precompute_walls(self):
+        """
+        Precomputes the walls for every cell in the labyrinth grid.
+        This method inspects the underlying character-based map  and determines for each logical cell in the grid, whether a wall exists in each of the four orientations.
+        The map uses doubled coordinates: each logical cell corresponds to a position in the map where both row and column indices are multiplied by 2.
+        Neighboring wall positions are checked using '-' for horizontal walls and '|' for vertical walls.
+
+        Returns
+        -------
+        numpy.ndarray of dict
+            A 2D array of shape (CELLROWS, CELLCOLS) where each element is a dict mapping an Orientation to a bool. The boolean indicates whether a wall exists in that orientation for the given cell.
+        """
         wall_matrix = np.empty((CELLROWS, CELLCOLS), dtype=object)
 
         row_doubled_idxs = [i * 2 for i in range(CELLROWS)]
@@ -397,6 +429,8 @@ if __name__ == '__main__':
             break
 
         ###* MEASUREMENT CODE START *###
+
+            #* You need to uncomment pass and comment break *#
             # pass
 
         # if myrob.measure_count == 1000:
