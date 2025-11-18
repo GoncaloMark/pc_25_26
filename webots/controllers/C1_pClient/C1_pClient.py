@@ -145,6 +145,8 @@ class MyRob:
             Direction.BACK: (self.ds[3] + self.ds[4]) / 2 #* Avg of both back facing sensors
         }
 
+        self.set_orientation(np.rad2deg(self.cur_dir))
+
         ###* MEASUREMENT CODE START *###
 
         # self.measures_front.append((self.ds[0] + self.ds[7]) / 2)
@@ -157,8 +159,20 @@ class MyRob:
 
         ###* MEASUREMENT CODE END *###
 
-    def set_orientation(self, dir):
-        self.orientation = dir
+    def set_orientation(self, deg):
+        normed = (deg + 360) % 360
+        if normed <= 95 and normed >= 85:
+            self.orientation = Orientation.NORTH
+        
+        elif normed <= 195 and normed >= 185:
+            self.orientation = Orientation.WEST
+
+        elif normed <= 285 and normed >= 275:
+            self.orientation = Orientation.SOUTH
+
+        elif normed <= 5 or (normed >= 355 and normed < 360):
+            self.orientation = Orientation.EAST
+            
 
     def motion_update(self):
         """
@@ -402,19 +416,15 @@ if __name__ == '__main__':
         if command == "N":
             print("Moving North")
             target_pos[1] += CELL_SIZE
-            myrob.set_orientation(Orientation.NORTH)
         elif command == "S":
             print("Moving South")
             target_pos[1] -= CELL_SIZE
-            myrob.set_orientation(Orientation.SOUTH)
         elif command == "E":
             print("Moving East")
             target_pos[0] += CELL_SIZE
-            myrob.set_orientation(Orientation.EAST)
         elif command == "W":
             print("Moving West")
             target_pos[0] -= CELL_SIZE
-            myrob.set_orientation(Orientation.WEST)
         ###* MEASUREMENT CODE START *###
         # elif command == "R":
         #     print("Resetting")
