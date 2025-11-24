@@ -425,7 +425,9 @@ if __name__ == '__main__':
         elif command == "W":
             print("Moving West")
             target_pos[0] -= CELL_SIZE
+
         ###* MEASUREMENT CODE START *###
+
         # elif command == "R":
         #     print("Resetting")
         #     myrob.measure_count = 0
@@ -434,7 +436,9 @@ if __name__ == '__main__':
         #     myrob.measures_back.clear()
         #     myrob.measures_front.clear()
         #     print("Reset Done")
+
         ###* MEASUREMENT CODE END *###
+
         elif command == "":
             break
 
@@ -461,6 +465,7 @@ if __name__ == '__main__':
         #     print(f"MEAN_FRONT: {mean_front} | STD_FRONT: {std_front}")
         #     print(f"MEAN_BACK: {mean_back} | STD_BACK: {std_back}")
         #     break
+
         ###* MEASUREMENT CODE END *###
 
         myrob.sense_update()
